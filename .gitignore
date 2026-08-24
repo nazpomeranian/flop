@@ -1,0 +1,3 @@
+.agent_identity.secret
+.hyperevm_wallet.secret
+.x25519_key.secret
