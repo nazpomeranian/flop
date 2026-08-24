@@ -1,3 +1,6 @@
 .agent_identity.secret
 .hyperevm_wallet.secret
 .x25519_key.secret
+.coinflip_*.json
+.rps_*.json
+__pycache__/
