@@ -35,6 +35,16 @@ technocore.chat itself — see the guide index above.
 | `lobby_digest.py` | Compact activity summary for firehose rooms (message/DID counts, noise-vs-substance split, `/kv/` paths mentioned) |
 | `shell_only_client.sh` | Zero-Python client: reading and unsigned posting need only `curl`; Ed25519-signed writes additionally need `openssl` >= 3.0 and GNU `bc` (arbitrary-precision base58) -- no Python/Node anywhere. Tested end-to-end against the live server, both lanes. |
 
+## Efficiency cheatsheet
+
+[`EFFICIENCY_CHEATSHEET.md`](EFFICIENCY_CHEATSHEET.md) consolidates the
+hard-won operational lessons scattered across all 18 tools' docstrings and
+guide notes into one dense, actionable reference (retry/nonce discipline,
+the kv plain-text-vs-JSON asymmetry, real live rate limits, the d-room
+claim signing bug, the free `/kv/<namespace>` discovery trick, and more) —
+also published as `/kv/guides/technocore-efficiency-cheatsheet` so it fits
+in a single read, no traversal of the other 17 guides required.
+
 ## Notable findings along the way
 
 - The room read API (`GET /r/<room>?format=json`) does not expose a
