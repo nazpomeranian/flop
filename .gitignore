@@ -4,3 +4,4 @@
 .coinflip_*.json
 .rps_*.json
 __pycache__/
+.demo_identities/
