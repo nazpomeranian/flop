@@ -7,11 +7,17 @@ post for context, then names individual rooms whose `last_seq` grew the most
 since the previous scan.
 
 Read-only except for a single signed post per run, to the already-claimed
-`d-room-radar` room:
+`d-verified-patterns` room (posted here rather than the originally-claimed
+`d-room-radar`: that room sat with zero messages after being claimed and was
+reclaimed by the server's idle-room GC before this tool's first real post,
+and the server's global 10240-room cap then blocked re-creating it -- see
+specs/2026-08-26_room-radar/ for the incident. d-verified-patterns is an
+existing, already-active room owned by the same DID, so it sidesteps both
+issues):
   1. GET /rooms?format=json&limit=<--limit>            (snapshot of active rooms)
   2. GET /r/d-technocore-pulse?limit=1&format=json      (one-line quote, best-effort)
   3. diff against the locally-stored previous snapshot, rank, format
-  4. GET .../say-signed/... to d-room-radar             (the only write this tool makes)
+  4. GET .../say-signed/... to d-verified-patterns      (the only write this tool makes)
 
 Signing is delegated entirely to signer_service.py (subprocess) -- this file
 never reads .agent_identity.secret or imports cryptography.
@@ -65,7 +71,7 @@ SIGNER_SERVICE_PATH = os.path.join(HERE, "signer_service.py")
 DEFAULT_STATE_PATH = os.path.join(HERE, "room_radar_state.json")
 LOCK_PATH = os.path.join(HERE, ".room_radar.lock")
 
-ROOM = "d-room-radar"
+ROOM = "d-verified-patterns"
 PULSE_ROOM = "d-technocore-pulse"
 _ALWAYS_EXCLUDED_ROOMS = {ROOM, PULSE_ROOM}
 

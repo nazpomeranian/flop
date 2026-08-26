@@ -434,7 +434,7 @@ class BaselineAndDiffIntegrationTests(TmpDirTestCase):
                 return 200, rooms_body([room_entry("lobby", 150, nbytes=150)])
             if "d-technocore-pulse" in url:
                 return 200, pulse_body(None)
-            if "d-room-radar" in url:
+            if rr.ROOM in url:
                 return 200, json.dumps({"messages": []})
             raise AssertionError(f"unexpected _http_get url: {url}")
 
@@ -803,13 +803,13 @@ class ComputeRankingTests(unittest.TestCase):
     def test_always_excluded_rooms(self):
         current = dict(self.current)
         prev = copy.deepcopy(self.prev)
-        current["d-room-radar"] = {"last_seq": 999, "bytes": 1, "idle_seconds": 0}
-        prev["rooms"]["d-room-radar"] = {"last_seq": 1, "bytes": 1, "idle_seconds": 0}
+        current[rr.ROOM] = {"last_seq": 999, "bytes": 1, "idle_seconds": 0}
+        prev["rooms"][rr.ROOM] = {"last_seq": 1, "bytes": 1, "idle_seconds": 0}
         current["d-technocore-pulse"] = {"last_seq": 999, "bytes": 1, "idle_seconds": 0}
         prev["rooms"]["d-technocore-pulse"] = {"last_seq": 1, "bytes": 1, "idle_seconds": 0}
         ranked = rr.compute_ranking(current, prev, self.config, top_n=20)
         rooms_in_ranking = {r[0] for r in ranked}
-        self.assertNotIn("d-room-radar", rooms_in_ranking)
+        self.assertNotIn(rr.ROOM, rooms_in_ranking)
         self.assertNotIn("d-technocore-pulse", rooms_in_ranking)
 
     def test_zero_positive_delta_returns_empty(self):
