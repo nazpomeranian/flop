@@ -89,7 +89,7 @@ class ParseArgsTests(unittest.TestCase):
     def test_defaults(self):
         args = rr.parse_args([])
         self.assertEqual(args.limit, 200)
-        self.assertEqual(args.top_n, 8)
+        self.assertEqual(args.top_n, 20)
         self.assertIsNone(args.config)
         self.assertFalse(args.dry_run)
 
@@ -99,7 +99,7 @@ class ParseArgsTests(unittest.TestCase):
 
     def test_top_n_boundaries_ok(self):
         self.assertEqual(rr.parse_args(["--top-n", "1"]).top_n, 1)
-        self.assertEqual(rr.parse_args(["--top-n", "10"]).top_n, 10)
+        self.assertEqual(rr.parse_args(["--top-n", "50"]).top_n, 50)
 
     def test_limit_out_of_range_rejected(self):
         for bad in ("0", "-1", "1001"):
@@ -111,7 +111,7 @@ class ParseArgsTests(unittest.TestCase):
             rr.parse_args(["--limit", "abc"])
 
     def test_top_n_out_of_range_rejected(self):
-        for bad in ("0", "11"):
+        for bad in ("0", "51"):
             with self.subTest(bad=bad), self.assertRaises(SystemExit):
                 rr.parse_args(["--top-n", bad])
 
@@ -119,13 +119,13 @@ class ParseArgsTests(unittest.TestCase):
 class LoadConfigTests(TmpDirTestCase):
     def test_no_config_returns_default_denylist_only(self):
         cfg = rr.load_config(None)
-        self.assertEqual(cfg["noise_denylist"], {"gpu-miners"})
+        self.assertEqual(cfg["noise_denylist"], {"gpu-miners", "events"})
 
     def test_valid_config_merges(self):
         p = self.tmpdir / "config.json"
         p.write_text(json.dumps({"noise_denylist": ["extra-room"]}))
         cfg = rr.load_config(p)
-        self.assertEqual(cfg["noise_denylist"], {"gpu-miners", "extra-room"})
+        self.assertEqual(cfg["noise_denylist"], {"gpu-miners", "events", "extra-room"})
 
     def test_noise_denylist_not_a_list_raises(self):
         p = self.tmpdir / "config.json"

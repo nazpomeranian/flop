@@ -33,7 +33,7 @@ Usage:
     python3 room_radar.py --dry-run            # preview only, zero side effects
     python3 room_radar.py --state PATH         # use an alternate state file
     python3 room_radar.py --config config.json # extra noise_denylist entries
-    python3 room_radar.py --limit 200 --top-n 8
+    python3 room_radar.py --limit 200 --top-n 20
 
 Config file (JSON, optional):
     {"noise_denylist": ["some-other-noisy-room"]}
@@ -209,8 +209,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="how many of /rooms' most-recently-active rooms to fetch (1-1000, default 200)",
     )
     p.add_argument(
-        "--top-n", type=int, default=8, dest="top_n",
-        help="ranking size (1-10, default 8)",
+        "--top-n", type=int, default=20, dest="top_n",
+        help="ranking size (1-50, default 20)",
     )
     p.add_argument("--config", type=Path, default=None, help="JSON config: {\"noise_denylist\": [...]}")
     p.add_argument("--state", type=Path, default=Path(DEFAULT_STATE_PATH), help="state file path")
@@ -219,8 +219,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
     if not (1 <= args.limit <= 1000):
         p.error(f"--limit must be between 1 and 1000 (got {args.limit})")
-    if not (1 <= args.top_n <= 10):
-        p.error(f"--top-n must be between 1 and 10 (got {args.top_n})")
+    if not (1 <= args.top_n <= 50):
+        p.error(f"--top-n must be between 1 and 50 (got {args.top_n})")
     return args
 
 
@@ -229,7 +229,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 # Built-in default -- always active regardless of whether --config is passed,
 # whether the config omits noise_denylist, or specifies only other values.
 # Never replaced by the config file's value, only merged with it.
-_DEFAULT_NOISE_DENYLIST = frozenset({"gpu-miners"})
+_DEFAULT_NOISE_DENYLIST = frozenset({"gpu-miners", "events"})  # "events" is server-written only (announces new public rooms), not organic activity, and can't be posted to
 
 
 def load_config(path: Path | None) -> dict:
