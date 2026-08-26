@@ -88,8 +88,23 @@ def main() -> None:
         print(new_value)
         return
 
+    mismatch_detected = False
     try:
         final = safe_note.cas_update(args.ns, args.key, compute)
+        try:
+            readback = safe_note._get(args.ns, args.key)
+        except urllib.error.URLError as e:
+            print(f"WARNING: wrote successfully but read-back verification failed: {e}", file=sys.stderr)
+            readback = None
+        if readback is not None and readback != final:
+            print(
+                f"WARNING: read-back mismatch on {args.ns}/{args.key} -- the note has "
+                "no write protection (unsigned, last-write-wins), so something else "
+                "wrote to it between our write and this check. Our keepalive fragment "
+                "may already be gone.",
+                file=sys.stderr,
+            )
+            mismatch_detected = True
     except NoteTooLargeError as e:
         print(
             f"ERROR: new note value would be {e} characters, over the {MAX_NOTE_CHARS}-char cap -- not writing",
@@ -108,6 +123,8 @@ def main() -> None:
         print(f"ERROR: {e}", file=sys.stderr)
         sys.exit(1)
     print(final)
+    if mismatch_detected:
+        sys.exit(1)
 
 
 if __name__ == "__main__":

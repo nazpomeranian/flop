@@ -8,6 +8,7 @@ from __future__ import annotations
 import contextlib
 import io
 import unittest
+import urllib.error
 from unittest import mock
 
 import safe_note
@@ -91,6 +92,7 @@ class SuccessWritePathTests(unittest.TestCase):
             return compute("mailbox: mb-abc123")
 
         with mock.patch.object(safe_note, "cas_update", side_effect=fake_cas_update), \
+             mock.patch.object(safe_note, "_get", side_effect=lambda ns, key: captured["compute"]("mailbox: mb-abc123")), \
              mock.patch("sys.argv", ["keepalive.py"]):
             buf = io.StringIO()
             with contextlib.redirect_stdout(buf):
@@ -111,22 +113,71 @@ class SuccessWritePathTests(unittest.TestCase):
         self.assertTrue(output.startswith("mailbox: mb-abc123 | keepalive:"), output)
         self.assertRegex(output, r"keepalive: \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
 
-    def test_main_no_args_never_calls_get_or_post_directly(self):
+    def test_main_no_args_never_calls_post_directly(self):
         """The success path must go through safe_note.cas_update() (criterion
         5: reuse cas_update's CAS retry, not a reimplementation) -- it must
-        not call safe_note._get/_post on its own outside of what cas_update
-        itself does internally."""
+        not call safe_note._post on its own outside of what cas_update
+        itself does internally. It DOES call safe_note._get once afterward,
+        deliberately, for read-back verification (see ReadBackVerificationTests)."""
         with mock.patch.object(safe_note, "cas_update", return_value="whatever") as cas_update_mock, \
-             mock.patch.object(safe_note, "_get") as get_mock, \
+             mock.patch.object(safe_note, "_get", return_value="whatever") as get_mock, \
              mock.patch.object(safe_note, "_post") as post_mock, \
              mock.patch("sys.argv", ["keepalive.py"]):
             buf = io.StringIO()
             with contextlib.redirect_stdout(buf):
                 keepalive.main()
         self.assertTrue(cas_update_mock.called)
-        get_mock.assert_not_called()
+        get_mock.assert_called_once()
         post_mock.assert_not_called()
         self.assertEqual(buf.getvalue().strip(), "whatever")
+
+
+class ReadBackVerificationTests(unittest.TestCase):
+    """The note has no write protection (unsigned, last-write-wins), so a
+    successful cas_update() doesn't guarantee the keepalive fragment is
+    still there a moment later. main() must read the note back after a
+    successful write and treat a mismatch as a failure, not a silent
+    success -- this is the gap a jp-agents room finding pointed out."""
+
+    def test_readback_matches_exits_zero(self):
+        with mock.patch.object(safe_note, "cas_update", return_value="mailbox: mb-abc | keepalive: X"), \
+             mock.patch.object(safe_note, "_get", return_value="mailbox: mb-abc | keepalive: X"), \
+             mock.patch("sys.argv", ["keepalive.py"]):
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                try:
+                    keepalive.main()
+                except SystemExit as e:
+                    self.fail(f"expected exit 0 on matching read-back, got SystemExit({e.code!r})")
+        self.assertEqual(buf.getvalue().strip(), "mailbox: mb-abc | keepalive: X")
+
+    def test_readback_mismatch_exits_nonzero_with_warning(self):
+        with mock.patch.object(safe_note, "cas_update", return_value="mailbox: mb-abc | keepalive: X"), \
+             mock.patch.object(safe_note, "_get", return_value="something else entirely -- clobbered"), \
+             mock.patch("sys.argv", ["keepalive.py"]):
+            buf, errbuf = io.StringIO(), io.StringIO()
+            with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(errbuf):
+                with self.assertRaises(SystemExit) as ctx:
+                    keepalive.main()
+        self.assertNotEqual(ctx.exception.code, 0)
+        self.assertIn("read-back mismatch", errbuf.getvalue())
+        self.assertIn("mailbox: mb-abc | keepalive: X", buf.getvalue())
+
+    def test_readback_network_error_warns_but_still_exits_zero(self):
+        """A failed read-back check (network error) is not proof the note
+        was clobbered -- our write already succeeded, so don't fail the run
+        over a check we merely couldn't perform. Warn on stderr instead."""
+        with mock.patch.object(safe_note, "cas_update", return_value="mailbox: mb-abc | keepalive: X"), \
+             mock.patch.object(safe_note, "_get", side_effect=urllib.error.URLError("boom")), \
+             mock.patch("sys.argv", ["keepalive.py"]):
+            buf, errbuf = io.StringIO(), io.StringIO()
+            with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(errbuf):
+                try:
+                    keepalive.main()
+                except SystemExit as e:
+                    self.fail(f"a failed read-back attempt must not fail the run, got SystemExit({e.code!r})")
+        self.assertIn("WARNING", errbuf.getvalue())
+        self.assertEqual(buf.getvalue().strip(), "mailbox: mb-abc | keepalive: X")
 
 
 class ErrorHandlingTests(unittest.TestCase):
