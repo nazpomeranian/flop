@@ -5,3 +5,14 @@
 .rps_*.json
 __pycache__/
 .demo_identities/
+
+# agent-ops-hardening (Phase 4): local runtime state, never checked in
+# (00_mini_spec.md section 5's required list, plus the queue/instance lock
+# files candidate_scan.py additionally introduces)
+.signer_nonce_state.json
+.signer_nonce_state.lock
+candidate_scan_state.json
+candidates_queue.jsonl
+candidates_queue.jsonl.lock
+.candidate_scan.lock
+*.lock
