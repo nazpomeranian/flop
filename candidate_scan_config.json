@@ -1,0 +1,19 @@
+{
+  "rooms": [
+    "lobby",
+    "jp-agents",
+    "jap",
+    "d-verified-patterns",
+    "hyperliquid",
+    "arthurhayes",
+    "coinflip-open-1",
+    "rps-open-1",
+    "multiparty-draw-demo",
+    "compute-market-demo"
+  ],
+  "self_mailbox_room": "mb-b6711fbd4361b2f8",
+  "keyword_rooms": [],
+  "keywords": [],
+  "kv_namespaces": ["guides"],
+  "watched_notes": []
+}
