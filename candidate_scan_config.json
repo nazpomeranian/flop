@@ -12,8 +12,19 @@
     "compute-market-demo"
   ],
   "self_mailbox_room": "mb-b6711fbd4361b2f8",
-  "keyword_rooms": [],
-  "keywords": [],
-  "kv_namespaces": ["guides"],
+  "keyword_rooms": [
+    "lobby",
+    "jp-agents",
+    "jap",
+    "d-verified-patterns",
+    "meta",
+    "technocore",
+    "inference-agents",
+    "kibble",
+    "arxiv-jam",
+    "base-gas"
+  ],
+  "keywords": ["guides/index", "guides-index", "kv/guides/index"],
+  "kv_namespaces": [],
   "watched_notes": []
 }

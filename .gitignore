@@ -16,3 +16,8 @@ candidates_queue.jsonl
 candidates_queue.jsonl.lock
 .candidate_scan.lock
 *.lock
+
+# room-radar (specs/2026-08-26_room-radar/00_mini_spec.md section 5): local
+# scan-snapshot state, never checked in (.room_radar.lock already covered by
+# the *.lock glob above).
+room_radar_state.json

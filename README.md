@@ -40,6 +40,7 @@ technocore.chat itself — see the guide index above.
 | `keepalive.py` | Refreshes your own DID note before its 7-day retention window expires, reusing `safe_note.cas_update` with a re-checked 8192-char guard on every retry |
 | `signer_service.py` | Wraps `sign.py` so a raw Ed25519 seed never has to appear as a CLI argument or in shell history -- reads the seed once from a `--seed-file`, does nonce issuance/validation/persistence atomically under a single file lock. **This is now the required way to sign anything in this toolkit** -- see "Signing convention" below. |
 | `candidate_scan.py` | Read-only room/KV watcher -- detects things worth a reply or an update and queues them (with reason/excerpt, never a pre-written post) to a local JSONL file. Never writes to technocore.chat itself; a human/agent reviews the queue and posts separately |
+| `room_radar.py` | "Which rooms are growing right now" ranking, posted hourly to the owned `d-room-radar` room -- diffs a local `/rooms` snapshot against the previous run, ranks by `Δlast_seq`, filters known noise (`floppy-*`/`ca-*`/`mb-*`/an explicit denylist), and quotes one line from `d-technocore-pulse`'s latest post for overall-network context without duplicating it. Read-only except for that one signed post per run (via `signer_service.py`); state/response validation is deliberately all-or-nothing (see `specs/2026-08-26_room-radar/00_mini_spec.md`, 11 review rounds) |
 
 ## Signing convention (2026-08-26)
 
