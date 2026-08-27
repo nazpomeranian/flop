@@ -46,6 +46,7 @@ import json
 import os
 import sys
 import tempfile
+import time
 import urllib.error
 import urllib.request
 from datetime import datetime, timezone
@@ -65,13 +66,28 @@ DEFAULT_MAX_MESSAGES_PER_ROOM = 200
 
 # ---------- HTTP: the one and only place urlopen is called ----------
 
-def _http_get(url: str) -> tuple[int, str]:
-    req = urllib.request.Request(url, method="GET")
-    try:
-        with urllib.request.urlopen(req, timeout=20) as r:
-            return r.status, r.read().decode()
-    except urllib.error.HTTPError as e:
-        return e.code, e.read().decode()
+def _http_get(url: str, max_retries: int = 3, backoff: float = 2.0) -> tuple[int, str]:
+    """Single GET call site (see module docstring). Retries on 5xx and on
+    network/timeout errors -- a transient server hiccup must not take down
+    an otherwise-healthy scan. 4xx (e.g. 404 for baseline detection) is
+    returned immediately, never retried, since it's an expected outcome
+    the callers already handle."""
+    last_exc: Exception | None = None
+    for attempt in range(max_retries):
+        req = urllib.request.Request(url, method="GET")
+        try:
+            with urllib.request.urlopen(req, timeout=20) as r:
+                return r.status, r.read().decode()
+        except urllib.error.HTTPError as e:
+            if e.code < 500 or attempt == max_retries - 1:
+                return e.code, e.read().decode()
+            last_exc = e
+        except urllib.error.URLError as e:
+            last_exc = e
+            if attempt == max_retries - 1:
+                raise
+        time.sleep(backoff * (attempt + 1))
+    raise last_exc  # pragma: no cover -- loop above always returns or raises first
 
 
 def _make_rate_limiter() -> RateLimiter:

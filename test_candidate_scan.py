@@ -58,6 +58,93 @@ def make_http_get_stub(responses: dict):
 
 
 # ---------------------------------------------------------------------------
+# _http_get retry behavior (added 2026-08-27: candidate_scan was dying
+# uncaught on a single transient 503 from the server, no retry at all)
+# ---------------------------------------------------------------------------
+
+class _FakeHTTPResponse:
+    def __init__(self, status, body):
+        self.status = status
+        self._body = body.encode()
+
+    def read(self):
+        return self._body
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+
+class HttpGetRetryTests(unittest.TestCase):
+    def test_success_on_first_try_no_sleep(self):
+        with mock.patch.object(urllib.request, "urlopen", return_value=_FakeHTTPResponse(200, "ok")) as up, \
+             mock.patch.object(cs.time, "sleep") as sleep_mock:
+            status, body = cs._http_get("http://x", max_retries=3, backoff=0.001)
+        self.assertEqual((status, body), (200, "ok"))
+        self.assertEqual(up.call_count, 1)
+        sleep_mock.assert_not_called()
+
+    def test_4xx_returns_immediately_no_retry(self):
+        err = urllib.error.HTTPError("http://x", 404, "not found", None, io.BytesIO(b"nope"))
+        with mock.patch.object(urllib.request, "urlopen", side_effect=err) as up:
+            status, body = cs._http_get("http://x", max_retries=3, backoff=0.001)
+        self.assertEqual(status, 404)
+        self.assertEqual(up.call_count, 1)
+
+    def test_5xx_retries_then_succeeds(self):
+        err = urllib.error.HTTPError("http://x", 503, "unavailable", None, io.BytesIO(b"down"))
+        responses = [err, err, _FakeHTTPResponse(200, "ok")]
+
+        def side_effect(*a, **kw):
+            r = responses.pop(0)
+            if isinstance(r, Exception):
+                raise r
+            return r
+
+        with mock.patch.object(urllib.request, "urlopen", side_effect=side_effect) as up, \
+             mock.patch.object(cs.time, "sleep") as sleep_mock:
+            status, body = cs._http_get("http://x", max_retries=3, backoff=0.001)
+        self.assertEqual((status, body), (200, "ok"))
+        self.assertEqual(up.call_count, 3)
+        self.assertEqual(sleep_mock.call_count, 2)
+
+    def test_5xx_exhausts_retries_returns_last_error(self):
+        err = urllib.error.HTTPError("http://x", 503, "unavailable", None, io.BytesIO(b"down"))
+        with mock.patch.object(urllib.request, "urlopen", side_effect=err) as up, \
+             mock.patch.object(cs.time, "sleep"):
+            status, body = cs._http_get("http://x", max_retries=3, backoff=0.001)
+        self.assertEqual(status, 503)
+        self.assertEqual(up.call_count, 3)
+
+    def test_network_error_retries_then_succeeds(self):
+        net_err = urllib.error.URLError("connection refused")
+        responses = [net_err, _FakeHTTPResponse(200, "ok")]
+
+        def side_effect(*a, **kw):
+            r = responses.pop(0)
+            if isinstance(r, Exception):
+                raise r
+            return r
+
+        with mock.patch.object(urllib.request, "urlopen", side_effect=side_effect) as up, \
+             mock.patch.object(cs.time, "sleep") as sleep_mock:
+            status, body = cs._http_get("http://x", max_retries=3, backoff=0.001)
+        self.assertEqual((status, body), (200, "ok"))
+        self.assertEqual(up.call_count, 2)
+        sleep_mock.assert_called_once()
+
+    def test_network_error_exhausts_retries_raises(self):
+        net_err = urllib.error.URLError("connection refused")
+        with mock.patch.object(urllib.request, "urlopen", side_effect=net_err) as up, \
+             mock.patch.object(cs.time, "sleep"):
+            with self.assertRaises(urllib.error.URLError):
+                cs._http_get("http://x", max_retries=3, backoff=0.001)
+        self.assertEqual(up.call_count, 3)
+
+
+# ---------------------------------------------------------------------------
 # T6: dispatch_room_message -- pure-function priority tests
 # ---------------------------------------------------------------------------
 
