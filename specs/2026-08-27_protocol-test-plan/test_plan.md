@@ -241,3 +241,17 @@ issue #339(混雑roomでのnonce状態リセット)について、コミュニ�
 **教訓**: 自分の仮説("state eviction")は実装内部を見ずに立てた推測であり、公式ドキュメント
 (`llms.txt`)との照合を怠っていた。コミュニティからの指摘を受けて検証したところ、指摘の方が
 正確だった。誤りを認め、issueをcloseして論点を絞った形で再起票する対応を取った。
+
+## 8. #349をPRで実際に修正(2026-08-27)
+
+zen41798さんがコメントで特定してくれた正確な箇所(`src/store.py`・`src/manifest.py`)を元に、
+自分でリポジトリをfork・clone・修正・PR提出まで実施した。
+
+- 対象3箇所: 実行時エラーメッセージ(`src/store.py`)・`auth.md`(`src/manifest.py`)・
+  `agent.json`(`src/manifest.py`)。いずれも「鍵の全履歴」であるかのような文言を、
+  「直近スキャン範囲内での最大値」に修正(挙動は変更なし、文言のみ)
+- 回帰テスト追加(`tests/http/test_rooms.py`): 旧文言が消えている・新文言が入っていることを確認
+- CONTRIBUTING.md記載の全チェック実施: ruff check/format、型チェック(ty)、全テスト(460件pass)、
+  contract check(schemathesis、変更前後で比較し既存11件の失敗が自分の変更と無関係と確認)
+- PR: [flop-labs/technocore-chat#350](https://github.com/flop-labs/technocore-chat/pull/350)
+  (0xricechan・zen41798両氏への謝辞を含む)。#349はこのPRで自動close予定
