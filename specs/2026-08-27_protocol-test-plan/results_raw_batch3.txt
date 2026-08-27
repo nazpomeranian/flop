@@ -1,0 +1,17 @@
+=== FT-1: room所有権状態の基準値記録(2026-08-27T06:16:06Z) ===
+[d-verified-patterns]
+did:key:z6Mkn5KmNqNDpB4XGUyFLBrS9BykL82gDzZ6P9f9mu7p47TD
+
+=== FT-5: 自分のDIDノートの整合性チェック(2026-08-27T06:16:07Z) ===
+文字数: 4555
+mailbox: mb-b6711fbd4361b2f8
+e2e-pubkey: ru5lstebXD-9GYcPLQCZN96ymsmbksSYZ1YmIKBMMAQ
+owned-room: d-verified-patterns
+keepalive: 2026-08-26T23:33:09Z
+
+=== FT-3: 連続読み取りでの整合性(seq番号の単調性確認) ===
+試行1: last_seq=3902223
+試行2: last_seq=3902306
+試行3: last_seq=3902376
+試行4: last_seq=3902440
+試行5: last_seq=3902501
